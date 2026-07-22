@@ -25,6 +25,10 @@ from fin_agent.tools.profile_tools import (
     update_user_profile,
     get_user_profile
 )
+from fin_agent.tools.yfinance_tools import (
+    YFINANCE_TOOLS_SCHEMA,
+    execute_yfinance_tool,
+)
 
 # Initialize Tushare - will be re-initialized when called if Config updates
 def get_pro():
@@ -1434,52 +1438,6 @@ BASE_TOOLS_SCHEMA = [
     {
         "type": "function",
         "function": {
-            "name": "get_us_stock_basic",
-            "description": "Get basic information about a US stock (e.g., industry, listing date). You can search by stock name or code (e.g., 'AAPL.O' for Apple).",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "ts_code": {
-                        "type": "string",
-                        "description": "The US stock code (e.g., 'AAPL.O', 'TSLA.O')."
-                    },
-                    "name": {
-                        "type": "string",
-                        "description": "The US stock name (e.g., 'Apple Inc')."
-                    }
-                },
-                "required": []
-            }
-        }
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "get_us_daily_price",
-            "description": "Get historical daily price data for a US stock within a date range (Open, High, Low, Close, Vol).",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "ts_code": {
-                        "type": "string",
-                        "description": "The US stock code (e.g., 'AAPL.O')."
-                    },
-                    "start_date": {
-                        "type": "string",
-                        "description": "Start date in YYYYMMDD format. Defaults to 30 days ago."
-                    },
-                    "end_date": {
-                        "type": "string",
-                        "description": "End date in YYYYMMDD format. Defaults to today."
-                    }
-                },
-                "required": ["ts_code"]
-            }
-        }
-    },
-    {
-        "type": "function",
-        "function": {
             "name": "get_hk_realtime_price",
             "description": "Get the latest real-time price data for a Hong Kong stock. If realtime data is unavailable, returns the latest daily price data.",
             "parameters": {
@@ -1488,23 +1446,6 @@ BASE_TOOLS_SCHEMA = [
                     "ts_code": {
                         "type": "string",
                         "description": "The Hong Kong stock code (e.g., '00700.HK')."
-                    }
-                },
-                "required": ["ts_code"]
-            }
-        }
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "get_us_realtime_price",
-            "description": "Get the latest real-time price data for a US stock. If realtime data is unavailable, returns the latest daily price data.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "ts_code": {
-                        "type": "string",
-                        "description": "The US stock code (e.g., 'AAPL.O')."
                     }
                 },
                 "required": ["ts_code"]
@@ -2046,7 +1987,7 @@ BASE_TOOLS_SCHEMA = [
 ]
 
 # Combine schemas
-TOOLS_SCHEMA = BASE_TOOLS_SCHEMA + PORTFOLIO_TOOLS_SCHEMA + SCHEDULER_TOOLS_SCHEMA + PROFILE_TOOLS_SCHEMA
+TOOLS_SCHEMA = BASE_TOOLS_SCHEMA + PORTFOLIO_TOOLS_SCHEMA + SCHEDULER_TOOLS_SCHEMA + PROFILE_TOOLS_SCHEMA + YFINANCE_TOOLS_SCHEMA
 
 # Helper to execute tool calls
 def execute_tool_call(tool_name, arguments):
@@ -2090,14 +2031,8 @@ def execute_tool_call(tool_name, arguments):
         return get_hk_stock_basic(**arguments)
     elif tool_name == "get_hk_daily_price":
         return get_hk_daily_price(**arguments)
-    elif tool_name == "get_us_stock_basic":
-        return get_us_stock_basic(**arguments)
-    elif tool_name == "get_us_daily_price":
-        return get_us_daily_price(**arguments)
     elif tool_name == "get_hk_realtime_price":
         return get_hk_realtime_price(**arguments)
-    elif tool_name == "get_us_realtime_price":
-        return get_us_realtime_price(**arguments)
     elif tool_name == "get_etf_basic":
         return get_etf_basic(**arguments)
     elif tool_name == "get_etf_daily_price":
@@ -2167,4 +2102,8 @@ def execute_tool_call(tool_name, arguments):
     elif tool_name == "get_user_profile":
         return get_user_profile(**arguments)
     else:
+        # Try yfinance tools
+        yf_result = execute_yfinance_tool(tool_name, arguments)
+        if yf_result is not None:
+            return yf_result
         return f"Error: Tool '{tool_name}' not found."
